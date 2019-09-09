@@ -1,10 +1,13 @@
 package info.bitrich.xchangestream.lgo.dto;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import info.bitrich.xchangestream.lgo.domain.LgoBatchOrderEvent;
 import org.knowm.xchange.dto.Order;
 
 import java.util.List;
 
+@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 public class LgoBatchUpdate {
 
     private final List<Order> updatedOrders;

@@ -17,10 +17,7 @@ import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.lgo.LgoAdapters;
 import org.knowm.xchange.lgo.dto.key.LgoKey;
-import org.knowm.xchange.lgo.dto.order.LgoEncryptedOrder;
-import org.knowm.xchange.lgo.dto.order.LgoOrderSignature;
-import org.knowm.xchange.lgo.dto.order.LgoPlaceCancelOrder;
-import org.knowm.xchange.lgo.dto.order.LgoPlaceOrder;
+import org.knowm.xchange.lgo.dto.order.*;
 import org.knowm.xchange.lgo.service.CryptoUtils;
 import org.knowm.xchange.lgo.service.LgoKeyService;
 import org.knowm.xchange.lgo.service.LgoSignatureService;
@@ -219,9 +216,9 @@ public class LgoStreamingTradeService implements StreamingTradeService {
      *
      * @return true
      */
-    public boolean cancelOrder(String orderId) throws IOException {
+    public boolean cancelOrder(String orderId, Date date) throws IOException {
         Long ref = nonceFactory.createValue();
-        LgoPlaceCancelOrder lgoOrder = new LgoPlaceCancelOrder(ref, orderId, new Date().toInstant());
+        LgoPlaceCancelOrder lgoOrder = new LgoPlaceCancelOrder(ref, orderId, date.toInstant());
         placeOrder(ref, lgoOrder);
         return true;
     }
@@ -234,5 +231,57 @@ public class LgoStreamingTradeService implements StreamingTradeService {
         String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(placeOrder);
         streamingService.sendMessage(payload);
         return ref.toString();
+    }
+
+    /**
+     * Place a market order without encryption
+     *
+     * @return the order reference
+     */
+    public String placeUnencryptedMarketOrder(MarketOrder marketOrder) throws IOException {
+        Long ref = nonceFactory.createValue();
+        LgoPlaceMarketOrder order = (LgoPlaceMarketOrder) LgoAdapters.adaptMarketOrder(marketOrder);
+        long timestamp = order.getTimestamp().toEpochMilli();
+        String toSign = String.format("{\"type\":\"M\",\"side\":\"%s\",\"product_id\":\"%s\",\"quantity\":\"%s\",\"timestamp\":%s}",
+                order.getSide(), order.getProductId(), order.getQuantity(), timestamp);
+        LgoOrderSignature signature = signatureService.signOrder(toSign);
+        LgoSocketPlaceUnencryptedOrder placeOrder = new LgoSocketPlaceUnencryptedOrder(new LgoUnencryptedOrder(new LgoUnencryptedOrder.LgoUnencryptedOrderData("M", order.getSide(), order.getProductId(), order.getQuantity().toPlainString(), null, timestamp), signature, ref));
+        String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(placeOrder);
+        streamingService.sendMessage(payload);
+        return ref.toString();
+    }
+
+    /**
+     * Place a limit order without encryption
+     *
+     * @return the order reference
+     */
+    public String placeUnencryptedLimitOrder(LimitOrder limitOrder) throws IOException {
+        Long ref = nonceFactory.createValue();
+        LgoPlaceLimitOrder order = (LgoPlaceLimitOrder) LgoAdapters.adaptLimitOrder(limitOrder);
+        long timestamp = order.getTimestamp().toEpochMilli();
+        String toSign = String.format("{\"type\":\"L\",\"side\":\"%s\",\"product_id\":\"%s\",\"quantity\":\"%s\",\"price\":\"%s\",\"timestamp\":%s}",
+                order.getSide(), order.getProductId(), order.getQuantity(), order.getPrice(), timestamp);
+        LgoOrderSignature signature = signatureService.signOrder(toSign);
+        LgoSocketPlaceUnencryptedOrder placeOrder = new LgoSocketPlaceUnencryptedOrder(new LgoUnencryptedOrder(new LgoUnencryptedOrder.LgoUnencryptedOrderData("L", order.getSide(), order.getProductId(), order.getQuantity().toPlainString(), order.getPrice().toPlainString(), timestamp), signature, ref));
+        String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(placeOrder);
+        streamingService.sendMessage(payload);
+        return ref.toString();
+    }
+
+    /**
+     * Place a cancel order without encryption
+     *
+     * @return true
+     */
+    public boolean placeUnencryptedCancelOrder(String orderId, Date date) throws IOException {
+        Long ref = nonceFactory.createValue();
+        LgoPlaceCancelOrder order = new LgoPlaceCancelOrder(ref, orderId, date.toInstant());
+        String toSign = String.format("{\"order_id\":%s,\"timestamp\":%s}", order.getOrderId(), order.getTimestamp().toEpochMilli());
+        LgoOrderSignature signature = signatureService.signOrder(toSign);
+        LgoSocketPlaceUnencryptedCancelOrder placeOrder = new LgoSocketPlaceUnencryptedCancelOrder(new LgoCancelOrder(signature, Long.parseLong(order.getOrderId()), order.getTimestamp().toEpochMilli(), ref));
+        String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(placeOrder);
+        streamingService.sendMessage(payload);
+        return true;
     }
 }

@@ -2,6 +2,8 @@ package info.bitrich.xchangestream.lgo.dto;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
@@ -11,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         @JsonSubTypes.Type(value = LgoUserUpdate.class, name = "update"),
         @JsonSubTypes.Type(value = LgoUserSnapshot.class, name = "snapshot")
 })
+@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 public class LgoUserMessage {
 
     private final long batchId;

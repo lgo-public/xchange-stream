@@ -2,6 +2,11 @@ package info.bitrich.xchangestream.lgo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import info.bitrich.xchangestream.lgo.domain.*;
+import info.bitrich.xchangestream.lgo.dto.LgoCancelOrder;
+import info.bitrich.xchangestream.lgo.dto.LgoSocketPlaceUnencryptedCancelOrder;
+import info.bitrich.xchangestream.lgo.dto.LgoSocketPlaceUnencryptedOrder;
+import info.bitrich.xchangestream.lgo.dto.LgoUnencryptedOrder;
+import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.Observable;
 import org.apache.commons.io.IOUtils;
 import org.assertj.core.util.Lists;
@@ -11,6 +16,7 @@ import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.dto.trade.UserTrade;
 import org.knowm.xchange.lgo.dto.key.LgoKey;
@@ -221,6 +227,70 @@ public class LgoStreamingTradeServiceTest {
         assertThat(captor.getValue().contains("\"reference\":22"));
         assertThat(captor.getValue().contains("\"signature\":{\"value\":\"signed\",\"source\":\"RSA\"},\"key_id\":\"abcdefg\"},\"type\":\"placeorder\""));
         assertThat(ref).isEqualTo("22");
+    }
+
+    @Test
+    public void it_places_an_unencrypted_market_order() throws IOException, ParseException {
+        Date date = dateFormat.parse("2019-07-25T07:16:21.600Z");
+        MarketOrder marketOrder = new MarketOrder(Order.OrderType.ASK, new BigDecimal("0.5"), CurrencyPair.BTC_USD, null, date);
+        when(nonceFactory.createValue()).thenReturn(22L);
+        LgoOrderSignature signed = new LgoOrderSignature("signed");
+        when(signatureService.signOrder(anyString())).thenReturn(signed);
+        doNothing().when(streamingService).sendMessage(anyString());
+
+        String ref = service.placeUnencryptedMarketOrder(marketOrder);
+
+        verify(nonceFactory).createValue();
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(signatureService).signOrder("{\"type\":\"M\",\"side\":\"S\",\"product_id\":\"BTC-USD\",\"quantity\":\"0.5\",\"timestamp\":1564038981600}");
+        verify(streamingService).sendMessage(captor.capture());
+        assertThat(captor.getValue())
+                        .isEqualTo(StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(new LgoSocketPlaceUnencryptedOrder(new LgoUnencryptedOrder(
+                                new LgoUnencryptedOrder.LgoUnencryptedOrderData("M", "S", "BTC-USD", "0.5", null, 1564038981600L), signed, 22))));
+        assertThat(captor.getValue()).contains("product_id");
+        assertThat(ref).isEqualTo("22");
+    }
+
+    @Test
+    public void it_places_an_unencrypted_limit_order() throws IOException, ParseException {
+        Date date = dateFormat.parse("2019-07-25T07:16:21.600Z");
+        LimitOrder limitOrder = new LimitOrder(Order.OrderType.ASK, new BigDecimal("0.5"), CurrencyPair.BTC_USD, null, date, new BigDecimal("1000"));
+        when(nonceFactory.createValue()).thenReturn(22L);
+        LgoOrderSignature signed = new LgoOrderSignature("signed");
+        when(signatureService.signOrder(anyString())).thenReturn(signed);
+        doNothing().when(streamingService).sendMessage(anyString());
+
+        String ref = service.placeUnencryptedLimitOrder(limitOrder);
+
+        verify(nonceFactory).createValue();
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(signatureService).signOrder("{\"type\":\"L\",\"side\":\"S\",\"product_id\":\"BTC-USD\",\"quantity\":\"0.5\",\"price\":\"1000\",\"timestamp\":1564038981600}");
+        verify(streamingService).sendMessage(captor.capture());
+        assertThat(captor.getValue())
+                .isEqualTo(StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(new LgoSocketPlaceUnencryptedOrder(new LgoUnencryptedOrder(
+                        new LgoUnencryptedOrder.LgoUnencryptedOrderData("L", "S", "BTC-USD", "0.5", "1000", 1564038981600L), signed, 22))));
+        assertThat(captor.getValue()).contains("product_id");
+        assertThat(ref).isEqualTo("22");
+    }
+
+    @Test
+    public void it_places_an_unencrypted_cancel_order() throws IOException, ParseException {
+        Date date = dateFormat.parse("2019-07-25T07:16:21.600Z");
+        when(nonceFactory.createValue()).thenReturn(22L);
+        LgoOrderSignature signed = new LgoOrderSignature("signed");
+        when(signatureService.signOrder(anyString())).thenReturn(signed);
+        doNothing().when(streamingService).sendMessage(anyString());
+
+        boolean res = service.placeUnencryptedCancelOrder("123456789", date);
+
+        verify(nonceFactory).createValue();
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(signatureService).signOrder("{\"order_id\":123456789,\"timestamp\":1564038981600}");
+        verify(streamingService).sendMessage(captor.capture());
+        assertThat(captor.getValue())
+                .isEqualTo(StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(new LgoSocketPlaceUnencryptedCancelOrder(new LgoCancelOrder(signed, 123456789L, 1564038981600L, 22L))));
+        assertThat(captor.getValue()).contains("order_id");
+        assertThat(res).isTrue();
     }
 
     static String parsePublicKey(String key) {
