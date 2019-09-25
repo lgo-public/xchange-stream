@@ -11,7 +11,6 @@ import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.lgo.LgoEnv;
-import org.knowm.xchange.lgo.LgoExchange;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,28 +30,12 @@ public class LgoStreamingExchangeExample {
     @Before
     public void setUp() throws Exception {
         exchange = new LgoStreamingExchange();
-        ExchangeSpecification spec = local();
-        spec.setSecretKey(readResource("/example/local/private_key.pem"));
-        spec.setApiKey(readResource("/example/local/api_key.txt"));
+        ExchangeSpecification spec = LgoEnv.sandbox();
+        spec.setSecretKey(readResource("/example/private_key.pem"));
+        spec.setApiKey(readResource("/example/api_key.txt"));
         spec.setShouldLoadRemoteMetaData(false);
         exchange.applySpecification(spec);
         exchange.connect().blockingAwait();
-    }
-
-    public static ExchangeSpecification local() {
-        ExchangeSpecification result = baseSpecification();
-        result.setSslUri("http://localhost:8081");
-        result.setHost("localhost");
-        result.setExchangeSpecificParametersItem(LgoEnv.KEYS_URL, "http://localhost:3001/keys");
-        result.setExchangeSpecificParametersItem(LgoEnv.WS_URL, "ws://localhost:8084");
-        return result;
-    }
-
-    private static ExchangeSpecification baseSpecification() {
-        ExchangeSpecification result = new ExchangeSpecification(LgoExchange.class);
-        result.setExchangeName("LGO");
-        result.setExchangeDescription("LGO is a fare and secure exchange for institutional and retail investors.");
-        return result;
     }
 
     private String readResource(String path) throws IOException {
@@ -152,7 +135,7 @@ public class LgoStreamingExchangeExample {
     public void cancelOrder() throws IOException {
         exchange
                 .getStreamingTradeService()
-                .cancelOrder("156406068135700001", new Date());
+                .cancelOrder("156942139622300001", new Date());
     }
 
     @Test
@@ -175,6 +158,6 @@ public class LgoStreamingExchangeExample {
     public void unencrypted_cancelOrder() throws IOException {
         exchange
                 .getStreamingTradeService()
-                .placeUnencryptedCancelOrder("156803953061000001", new Date());
+                .placeUnencryptedCancelOrder("156942153893400001", new Date());
     }
 }

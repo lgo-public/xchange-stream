@@ -6,6 +6,7 @@ import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.lgo.domain.LgoBatchOrderEvent;
 import info.bitrich.xchangestream.lgo.domain.LgoMatchOrderEvent;
 import info.bitrich.xchangestream.lgo.domain.LgoOrderEvent;
+import info.bitrich.xchangestream.lgo.dto.LgoUnencryptedOrder;
 import info.bitrich.xchangestream.lgo.dto.*;
 import info.bitrich.xchangestream.service.netty.StreamingObjectMapperHelper;
 import io.reactivex.Observable;

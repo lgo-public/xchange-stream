@@ -45,7 +45,7 @@ public class LgoStreamingService extends JsonNettyStreamingService {
         DefaultHttpHeaders headers = super.getCustomHeaders();
         String timestamp = String.valueOf(System.currentTimeMillis());
         headers.add("X-LGO-DATE", timestamp);
-        String auth = signatureService.digestHeader(this.apiUrl + "/", timestamp);
+        String auth = signatureService.digestSignedUrlHeader(this.apiUrl, timestamp);
         headers.add("Authorization", auth);
         return headers;
     }

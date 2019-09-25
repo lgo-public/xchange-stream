@@ -9,6 +9,7 @@ import org.knowm.xchange.dto.account.Wallet;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -28,17 +29,20 @@ public class LgoStreamingAccountServiceTest {
 
         verify(streamingService).subscribeChannel("balance");
         assertThat(wallet.blockingFirst()).usingRecursiveComparison().isEqualTo(
-                new Wallet(
+                wallet(
                         new Balance(Currency.BTC, new BigDecimal("2301.01329566"), new BigDecimal("2297.01329566"), new BigDecimal("4.00000000")),
-                        new Balance(Currency.USD, new BigDecimal("453616.3125"), new BigDecimal("453616.3125"), new BigDecimal("0.0000"))
-                )
+                        new Balance(Currency.USD, new BigDecimal("453616.3125"), new BigDecimal("453616.3125"), new BigDecimal("0.0000")))
         );
         assertThat(wallet.blockingLast()).usingRecursiveComparison().isEqualTo(
-                new Wallet(
+                wallet(
                         new Balance(Currency.BTC, new BigDecimal("2299.01329566"), new BigDecimal("2295.01329566"), new BigDecimal("4.00000000")),
                         new Balance(Currency.USD, new BigDecimal("453616.3125"), new BigDecimal("453616.3125"), new BigDecimal("0.0000"))
                 )
         );
+    }
+
+    private Wallet wallet(Balance... balances) {
+        return Wallet.Builder.from(Arrays.asList(balances)).build();
     }
 
     @Test

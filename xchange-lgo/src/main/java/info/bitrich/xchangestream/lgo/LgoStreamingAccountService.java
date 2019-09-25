@@ -44,7 +44,7 @@ public class LgoStreamingAccountService implements StreamingAccountService {
                         wallet.clear();
                     }
                     LgoAdapter.adaptBalances(s.getData()).forEach(balance -> wallet.put(balance.getCurrency(), balance));
-                    return new Wallet(wallet.values());
+                    return Wallet.Builder.from(wallet.values()).build();
                 });
     }
 }
