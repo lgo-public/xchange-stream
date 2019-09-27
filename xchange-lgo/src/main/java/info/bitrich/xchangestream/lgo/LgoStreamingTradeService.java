@@ -278,9 +278,9 @@ public class LgoStreamingTradeService implements StreamingTradeService {
     public boolean placeUnencryptedCancelOrder(String orderId, Date date) throws IOException {
         Long ref = nonceFactory.createValue();
         LgoPlaceCancelOrder order = new LgoPlaceCancelOrder(ref, orderId, date.toInstant());
-        String toSign = String.format("{\"order_id\":%s,\"timestamp\":%s}", order.getOrderId(), order.getTimestamp().toEpochMilli());
+        String toSign = String.format("{\"order_id\":\"%s\",\"timestamp\":%s}", order.getOrderId(), order.getTimestamp().toEpochMilli());
         LgoOrderSignature signature = signatureService.signOrder(toSign);
-        LgoSocketPlaceUnencryptedCancelOrder placeOrder = new LgoSocketPlaceUnencryptedCancelOrder(new LgoCancelOrder(signature, Long.parseLong(order.getOrderId()), order.getTimestamp().toEpochMilli(), ref));
+        LgoSocketPlaceUnencryptedCancelOrder placeOrder = new LgoSocketPlaceUnencryptedCancelOrder(new LgoCancelOrder(signature, order.getOrderId(), order.getTimestamp().toEpochMilli(), ref));
         String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(placeOrder);
         streamingService.sendMessage(payload);
         return true;

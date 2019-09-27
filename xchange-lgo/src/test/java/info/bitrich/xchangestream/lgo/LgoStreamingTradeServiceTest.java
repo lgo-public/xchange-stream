@@ -285,10 +285,10 @@ public class LgoStreamingTradeServiceTest {
 
         verify(nonceFactory).createValue();
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(signatureService).signOrder("{\"order_id\":123456789,\"timestamp\":1564038981600}");
+        verify(signatureService).signOrder("{\"order_id\":\"123456789\",\"timestamp\":1564038981600}");
         verify(streamingService).sendMessage(captor.capture());
         assertThat(captor.getValue())
-                .isEqualTo(StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(new LgoSocketPlaceUnencryptedCancelOrder(new LgoCancelOrder(signed, 123456789L, 1564038981600L, 22L))));
+                .isEqualTo(StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(new LgoSocketPlaceUnencryptedCancelOrder(new LgoCancelOrder(signed, "123456789", 1564038981600L, 22L))));
         assertThat(captor.getValue()).contains("order_id");
         assertThat(res).isTrue();
     }

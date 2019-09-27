@@ -7,11 +7,11 @@ import org.knowm.xchange.lgo.dto.order.LgoOrderSignature;
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 public class LgoCancelOrder {
     private final LgoOrderSignature signature;
-    private final long orderId;
+    private final String orderId;
     private final long timestamp;
     private final Long reference;
 
-    public LgoCancelOrder(LgoOrderSignature signature, long orderId, long timestamp, Long reference) {
+    public LgoCancelOrder(LgoOrderSignature signature, String orderId, long timestamp, Long reference) {
         this.signature = signature;
         this.orderId = orderId;
         this.timestamp = timestamp;
@@ -22,7 +22,7 @@ public class LgoCancelOrder {
         return signature;
     }
 
-    public long getOrderId() {
+    public String getOrderId() {
         return orderId;
     }
 
