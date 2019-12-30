@@ -25,7 +25,7 @@ public class LgoStreamingExchangeExample {
     @Before
     public void setUp() throws Exception {
         exchange = new LgoStreamingExchange();
-        ExchangeSpecification spec = LgoEnv.local();
+        ExchangeSpecification spec = LgoEnv.sandbox();
         spec.setSecretKey(readResource("/example/private_key.pem"));
         spec.setApiKey(readResource("/example/api_key.txt"));
         spec.setShouldLoadRemoteMetaData(false);
