@@ -20,6 +20,7 @@ public class LgoStreamingServiceTest {
     public void setUp() {
         ExchangeSpecification env = LgoEnv.sandbox();
         env.getExchangeSpecificParameters().put(LgoEnv.SIGNATURE_SERVICE, SignatureService.PASSTHROUGHS);
+
         service = new LgoStreamingService(LgoSignatureService.createInstance(env), "apiUrl");
     }
 

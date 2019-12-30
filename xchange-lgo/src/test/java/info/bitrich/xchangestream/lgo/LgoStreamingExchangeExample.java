@@ -25,10 +25,11 @@ public class LgoStreamingExchangeExample {
     @Before
     public void setUp() throws Exception {
         exchange = new LgoStreamingExchange();
-        ExchangeSpecification spec = LgoEnv.sandbox();
+        ExchangeSpecification spec = LgoEnv.local();
         spec.setSecretKey(readResource("/example/private_key.pem"));
         spec.setApiKey(readResource("/example/api_key.txt"));
         spec.setShouldLoadRemoteMetaData(false);
+        spec.setExchangeSpecificParametersItem(LgoEnv.SHOULD_ENCRYPT_ORDERS, false);
         exchange.applySpecification(spec);
         exchange.connect().blockingAwait();
     }
@@ -130,6 +131,6 @@ public class LgoStreamingExchangeExample {
     public void cancelOrder() throws IOException {
         exchange
                 .getStreamingTradeService()
-                .cancelOrder("156406068135700001");
+                .cancelOrder("157772243025700001");
     }
 }

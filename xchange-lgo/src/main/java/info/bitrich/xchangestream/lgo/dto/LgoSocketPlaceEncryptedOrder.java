@@ -2,11 +2,11 @@ package info.bitrich.xchangestream.lgo.dto;
 
 import org.knowm.xchange.lgo.dto.order.LgoEncryptedOrder;
 
-public class LgoSocketPlaceOrder {
+public class LgoSocketPlaceEncryptedOrder {
 
     private final LgoEncryptedOrder order;
 
-    public LgoSocketPlaceOrder(LgoEncryptedOrder encryptedOrder) {
+    public LgoSocketPlaceEncryptedOrder(LgoEncryptedOrder encryptedOrder) {
         this.order = encryptedOrder;
     }
 

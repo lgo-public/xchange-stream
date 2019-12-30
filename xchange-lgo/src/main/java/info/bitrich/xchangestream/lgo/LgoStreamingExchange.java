@@ -1,14 +1,10 @@
 package info.bitrich.xchangestream.lgo;
 
-import info.bitrich.xchangestream.core.ProductSubscription;
-import info.bitrich.xchangestream.core.StreamingExchange;
-import info.bitrich.xchangestream.core.StreamingMarketDataService;
+import info.bitrich.xchangestream.core.*;
 import io.reactivex.Completable;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.lgo.LgoEnv;
-import org.knowm.xchange.lgo.LgoExchange;
-import org.knowm.xchange.lgo.service.LgoKeyService;
-import org.knowm.xchange.lgo.service.LgoSignatureService;
+import org.knowm.xchange.lgo.*;
+import org.knowm.xchange.lgo.service.*;
 import org.knowm.xchange.utils.nonce.CurrentTimeNonceFactory;
 import si.mazi.rescu.SynchronizedValueFactory;
 
@@ -23,10 +19,15 @@ public class LgoStreamingExchange extends LgoExchange implements StreamingExchan
     @Override
     protected void initServices() {
         super.initServices();
+        boolean shouldEncrypt = (boolean) getExchangeSpecification().getExchangeSpecificParameters().getOrDefault(LgoEnv.SHOULD_ENCRYPT_ORDERS, false);
         streamingService = createStreamingService();
         marketDataService = new LgoStreamingMarketDataService(streamingService);
         accountService = new LgoStreamingAccountService(streamingService);
-        tradeService = new LgoStreamingTradeService(streamingService, new LgoKeyService(getExchangeSpecification()), LgoSignatureService.createInstance(getExchangeSpecification()), nonceFactory);
+        tradeService = new LgoStreamingTradeService(streamingService,
+                new LgoKeyService(getExchangeSpecification()),
+                LgoSignatureService.createInstance(getExchangeSpecification()),
+                nonceFactory,
+                shouldEncrypt);
     }
 
     private LgoStreamingService createStreamingService() {

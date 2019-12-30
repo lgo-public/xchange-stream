@@ -2,6 +2,7 @@ package info.bitrich.xchangestream.lgo;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import info.bitrich.xchangestream.core.StreamingTradeService;
 import info.bitrich.xchangestream.lgo.domain.*;
 import info.bitrich.xchangestream.lgo.dto.*;
@@ -27,14 +28,20 @@ public class LgoStreamingTradeService implements StreamingTradeService {
     private final LgoKeyService keyService;
     private final LgoSignatureService signatureService;
     private final SynchronizedValueFactory<Long> nonceFactory;
+    private final boolean shouldEncryptOrders;
     private final Map<CurrencyPair, LgoUserBatchSubscription> batchSubscriptions = new ConcurrentHashMap<>();
     private Observable<LgoOrderEvent> afrSubscription;
 
-    LgoStreamingTradeService(LgoStreamingService streamingService, LgoKeyService keyService, LgoSignatureService signatureService, SynchronizedValueFactory<Long> nonceFactory) {
+    LgoStreamingTradeService(LgoStreamingService streamingService,
+                             LgoKeyService keyService,
+                             LgoSignatureService signatureService,
+                             SynchronizedValueFactory<Long> nonceFactory,
+                             boolean shouldEncryptOrders) {
         this.streamingService = streamingService;
         this.keyService = keyService;
         this.signatureService = signatureService;
         this.nonceFactory = nonceFactory;
+        this.shouldEncryptOrders = shouldEncryptOrders;
     }
 
     /**
@@ -140,8 +147,12 @@ public class LgoStreamingTradeService implements StreamingTradeService {
      */
     public String placeMarketOrder(MarketOrder marketOrder) throws IOException {
         Long ref = nonceFactory.createValue();
-        LgoPlaceOrder lgoOrder = LgoAdapters.adaptMarketOrder(marketOrder);
-        return placeOrder(ref, lgoOrder);
+        if (shouldEncryptOrders) {
+            LgoPlaceOrder lgoOrder = LgoAdapters.adaptEncryptedMarketOrder(marketOrder);
+            return placeEncryptedOrder(ref, lgoOrder);
+        }
+        LgoUnencryptedOrder lgoUnencryptedOrder = LgoAdapters.adaptUnencryptedMarketOrder(marketOrder);
+        return placeUnencryptedOrder(lgoUnencryptedOrder, ref);
     }
 
     /**
@@ -151,8 +162,11 @@ public class LgoStreamingTradeService implements StreamingTradeService {
      */
     public String placeLimitOrder(LimitOrder limitOrder) throws IOException {
         Long ref = nonceFactory.createValue();
-        LgoPlaceOrder lgoOrder = LgoAdapters.adaptLimitOrder(limitOrder);
-        return placeOrder(ref, lgoOrder);
+        if (shouldEncryptOrders) {
+            return placeEncryptedOrder(ref, LgoAdapters.adaptLimitOrder(limitOrder));
+        }
+        LgoUnencryptedOrder lgoUnencryptedOrder = LgoAdapters.adaptUnencryptedLimitOrder(limitOrder);
+        return placeUnencryptedOrder(lgoUnencryptedOrder, ref);
     }
 
     /**
@@ -163,15 +177,54 @@ public class LgoStreamingTradeService implements StreamingTradeService {
     public boolean cancelOrder(String orderId) throws IOException {
         Long ref = nonceFactory.createValue();
         LgoPlaceCancelOrder lgoOrder = new LgoPlaceCancelOrder(ref, orderId, new Date().toInstant());
-        placeOrder(ref, lgoOrder);
+        if (shouldEncryptOrders) {
+            placeEncryptedOrder(ref, lgoOrder);
+            return true;
+        }
+        return placeUnencryptedCancel(lgoOrder);
+    }
+
+    private boolean placeUnencryptedCancel(LgoPlaceCancelOrder cancelOrder) throws JsonProcessingException {
+        String toSign = generateStringToSign(cancelOrder);
+        LgoOrderSignature signature = signatureService.signOrder(toSign);
+        LgoSocketCancelOrder placeOrder = new LgoSocketCancelOrder(cancelOrder, signature);
+        String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(placeOrder);
+        streamingService.sendMessage(payload);
         return true;
     }
 
-    private String placeOrder(Long ref, LgoPlaceOrder lgoOrder) throws JsonProcessingException {
+    private String generateStringToSign(LgoPlaceCancelOrder cancelOrder) {
+        ObjectNode node = StreamingObjectMapperHelper.getObjectMapper().createObjectNode();
+        node.put("order_id", cancelOrder.getOrderId());
+        node.put("timestamp", cancelOrder.getTimestamp().toEpochMilli());
+        return node.toString();
+    }
+
+    private String placeUnencryptedOrder(LgoUnencryptedOrder order, Long ref) throws JsonProcessingException {
+        String toSign = generateStringToSign(order);
+        LgoOrderSignature signatureValue = signatureService.signOrder(toSign);
+        LgoSocketPlaceUnencryptedOrder placeOrder = new LgoSocketPlaceUnencryptedOrder(order, ref, signatureValue);
+        String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(placeOrder);
+        streamingService.sendMessage(payload);
+        return ref.toString();
+    }
+
+    private String generateStringToSign(LgoUnencryptedOrder order) {
+        ObjectNode node = StreamingObjectMapperHelper.getObjectMapper().createObjectNode();
+        node.put("type", order.type);
+        node.put("side", order.side);
+        node.put("product_id", order.productId);
+        node.put("quantity", order.quantity);
+        if ("L".equals(order.type)) node.put("price", order.price);
+        node.put("timestamp", order.timestamp);
+        return node.toString();
+    }
+
+    private String placeEncryptedOrder(Long ref, LgoPlaceOrder lgoOrder) throws JsonProcessingException {
         LgoKey lgoKey = keyService.selectKey();
         String encryptedOrder = CryptoUtils.encryptOrder(lgoKey, lgoOrder);
         LgoOrderSignature signature = signatureService.signOrder(encryptedOrder);
-        LgoSocketPlaceOrder placeOrder = new LgoSocketPlaceOrder(new LgoEncryptedOrder(lgoKey.getId(), encryptedOrder, signature, ref));
+        LgoSocketPlaceEncryptedOrder placeOrder = new LgoSocketPlaceEncryptedOrder(new LgoEncryptedOrder(lgoKey.getId(), encryptedOrder, signature, ref));
         String payload = StreamingObjectMapperHelper.getObjectMapper().writeValueAsString(placeOrder);
         streamingService.sendMessage(payload);
         return ref.toString();
