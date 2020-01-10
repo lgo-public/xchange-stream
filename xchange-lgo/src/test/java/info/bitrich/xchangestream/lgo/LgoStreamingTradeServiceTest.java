@@ -278,7 +278,7 @@ public class LgoStreamingTradeServiceTest {
         assertThat(captor.getValue()).contains("\"reference\":22");
         assertThat(captor.getValue()).contains("\"signature\":{\"value\":\"signed\",\"source\":\"RSA\"}");
         assertThat(captor.getValue()).contains("\"type\":\"cancelorder\"");
-        assertThat(captor.getValue()).contains("\"order\":{\"type\":\"M\"");
+        assertThat(captor.getValue()).contains("\"order_id\":\"1234\"");
     }
 
     private static String parsePublicKey(String key) {
